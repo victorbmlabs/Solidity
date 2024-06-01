@@ -1,5 +1,7 @@
 pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "witnet-solidity-bridge/contracts/interfaces/IWitnetRandomness.sol";
+
 
 using Counters for Counters.Counter;
 enum PICK { HEADS, TAILS, NONE }
@@ -21,22 +23,25 @@ contract Coinflip {
     event WagerCommenced(uint64 id); // When a game has two players and will start
     event FlipResult(uint64 id, address winner, bool heads)
 
-    Counters.Counter public gameId;
+    Wager[] betHistory;
+    Wager bet;
+    IWitnetRandomness witnet;
     PICK public pick;
     STATE public state;
+\
+    uint64 public maxBetAmount = 10000000000000000000; // 10 Ether in wei's
+    uint8 public minBetAmount =  2000000000000000; // 0.002 Ether in wei's 
+    uint32 public randomness;
+    uint256 public latestRandomizingBlock;
+    Counters.Counter public gameId;
+
+    mapping(uint64 => Wager) public wagerMap; // Keep track of open games
+    mapping(bytes32 => uint256) public requestIdGameId; 
 
     modifier validPick(PICK pick) {
         require(pick != PICK.NONE, "Pick has not been set")
         _;
     }
-
-    Wager[] betHistory;
-    Wager bet;
-    uint64 public maxBetAmount = 10000000000000000000; // 10 Ether in wei's
-    uint8 public minBetAmount =  2000000000000000; // 0.002 Ether in wei's 
-
-    mapping(uint64 => Wager) public wagerMap; // Keep track of open games
-    mapping(bytes32 => uint256) public requestIdGameId; 
 
     function createWager(PICK pick) public payable validPick(pick) {
         require(msg.value => minBetAmount, "Bet value is below the minimal betting value.")
