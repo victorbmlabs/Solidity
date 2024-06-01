@@ -1,6 +1,4 @@
 pragma solidity ^0.8.24;
-import "@pythnetwork/entropy-sdk-solidity/IEntropy.sol";
-import "@pythnetwork/entropy-sdk-solidity/IEntropyConsumer.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
 using Counters for Counters.Counter;
@@ -17,11 +15,7 @@ struct Wager {
     address payable winner;
 }
 
-contract Coinflip is IEntropyConsumer {
-    constructor(address _entropy, address _provider) {
-        entropy = IEntropy(_entropy);
-        provider = _provider;
-    }
+contract Coinflip {
 
     event WagerCreated(address creator, uint64 wagerValue, uint256 gameId);
     event WagerCommenced(uint64 id); // When a game has two players and will start
@@ -32,7 +26,7 @@ contract Coinflip is IEntropyConsumer {
     STATE public state;
 
     modifier validPick(PICK pick) {
-        require(pick != PICK.NOT_SET, "Pick has not been set")
+        require(pick != PICK.NONE, "Pick has not been set")
         _;
     }
 
@@ -55,7 +49,7 @@ contract Coinflip is IEntropyConsumer {
             player1: payable(msg.sender),
             player2: payable(address(0)),
             player1Pick: pick,
-            player2State: PICK.NOT_SET,
+            player2State: PICK.NONE,
             state: STATE.OPEN,
             prize: msg.value,
             winner: payable(address(0))
@@ -94,11 +88,7 @@ contract Coinflip is IEntropyConsumer {
     }
 
     function flip(Wager wager) internal {
-        /* Handles the winner selection via Pyth entropy & pays out to the winner. */
-    }
-
-    function getEntropy() internal view override returns (address) {
-        return address(entropy);
+        /* Handles the winner selection via entropy & pays out to the winner. */
     }
 
     function isBetMatched() {
