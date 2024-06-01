@@ -43,17 +43,17 @@ contract Coinflip is IEntropyConsumer {
     uint64 public maxBetAmount = 10000000000000000000; // 10 Ether in wei's
     uint8 public minBetAmount =  2000000000000000; // 0.002 Ether in wei's 
 
-    mapping(uint256 => Wager) public wagerMap; // Keep track of open games
+    mapping(uint64 => Wager) public wagerMap; // Keep track of open games
     mapping(bytes32 => uint256) public requestIdGameId; 
 
     function createWager(PICK pick) public payable validPick(pick) {
         require(msg.value => minBetAmount, "Bet value is below the minimal betting value.")
 
-        uint64 _id = gameId.current();
+        uint64 id = gameId.current();
         gameId.increment();
 
-        Wager memory _wager = Wager({
-            id: _id,
+        Wager memory wager = Wager({ // Make a copy of the wager object
+            id: id,
             player1: payable(msg.sender),
             player2: payable(address(0)),
             player1Pick: pick,
@@ -63,18 +63,36 @@ contract Coinflip is IEntropyConsumer {
             winner: payable(address(0))
         });
 
-        wagerMap[_id] = _wager;
-        emit WagerCreated(msg.sender, msg.value, _id);
+        wagerMap[id] = wager;
+        emit WagerCreated(msg.sender, msg.value, id);
     }
 
-    function joinWager(uint256 _gameId, PICK pick) public payable validPick(pick) {
-        require(msg.sender != wagerMap[_id].player1, "You cannot join a game against yourself")
-        require(wagerMap[_gameId].state == STATE.OPEN, "Game needs to be open to join")
-        require(wagerMap[_gameId].player2 == address(0), "Game is full");
-        require(wagerMap[_gameId].player2Pick != pick, "This pick is already chosen")
+    function joinWager(uint64 gameId, PICK pick) public payable validPick(pick) {
+        Wager storage wager = wagerMap[gameId]; // Get the reference to struct for persistant modification
+
+        require(msg.sender != wager.player1, "You cannot join a game against yourself")
+        require(wager.state == STATE.OPEN, "Game needs to be open to join")
+        require(wager.player2 == address(0), "Game is full");
+        require(wager.player2Pick != pick, "This pick is already chosen")
+        // add require check to see if join bet is within 1-2% of actual wager bet
+
+        wager.player2Pick = pick;
+        wagerMap[_gameId].prize ++ msg.value,
+        wagerMap[_gameId].state = STATE.PROCESSING;
+        wagerMap[_gameId].player2 = payable(msg.sender);
     }
 
     function getEntropy() internal view override returns (address) {
         return address(entropy);
+    }
+
+    function isBetMatched() {
+
+    }
+
+    function flip(Wager wager) internal {
+        /* Handles the winner selection via Pyth entropy & pays out to the winner. */
+`       
+        uint64 
     }
 }
