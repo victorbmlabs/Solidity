@@ -18,6 +18,9 @@ struct Wager {
 }
 
 contract Coinflip {
+    /*  A dApp facilitating player-vs-player coinflip betting
+        Uses Witnet's Randomness Oracle
+        Code is for deployment on the Celo blockchain */
 
     event WagerCreated(address creator, uint64 wagerValue, uint256 gameId);
     event WagerCommenced(uint64 id); // When a game has two players and will start
@@ -28,7 +31,7 @@ contract Coinflip {
     IWitnetRandomness witnet;
     PICK public pick;
     STATE public state;
-\
+
     uint64 public maxBetAmount = 10000000000000000000; // 10 Ether in wei's
     uint8 public minBetAmount =  2000000000000000; // 0.002 Ether in wei's 
     uint32 public randomness;
@@ -37,6 +40,12 @@ contract Coinflip {
 
     mapping(uint64 => Wager) public wagerMap; // Keep track of open games
     mapping(bytes32 => uint256) public requestIdGameId; 
+
+    constructor () {
+        witnet = IWitnetRandomness(
+            address("0x0123456fbBC59E181D76B6Fe8771953d1953B51a") // Alfajores Testnet
+        );
+    }
 
     modifier validPick(PICK pick) {
         require(pick != PICK.NONE, "Pick has not been set")
@@ -63,6 +72,8 @@ contract Coinflip {
         wagerMap[id] = wager;
         emit WagerCreated(msg.sender, msg.value, id);
     }
+
+    receive () external payable {}
 
     function closeWager(uint64 gameId) public onlyOwner {
         require(wagerMap[gameId] != 0, "This wager does not exist")
