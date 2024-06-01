@@ -3,6 +3,20 @@ import "@pythnetwork/entropy-sdk-solidity/IEntropy.sol";
 import "@pythnetwork/entropy-sdk-solidity/IEntropyConsumer.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
+using Counters for Counters.Counter;
+enum PICK { HEADS, TAILS, NONE }
+enum STATE { OPEN, CLOSED, PROCESSING }
+
+struct Wager {
+    address payable player1; // Creator
+    address payable player2; 
+    PICK player1Pick;
+    PICK player2Pick;
+    STATE state;
+    uint256 prize;
+    address payable winner;
+}
+
 contract Coinflip is IEntropyConsumer {
     constructor(address _entropy, address _provider) {
         entropy = IEntropy(_entropy);
@@ -13,29 +27,13 @@ contract Coinflip is IEntropyConsumer {
     event WagerCommenced(uint64 id); // When a game has two players and will start
     event FlipResult(uint64 id, address winner, bool heads)
 
-    using Counters for Counters.Counter;
     Counters.Counter public gameId;
-
-    enum PICK { HEADS, TAILS, NONE }
     PICK public pick;
-
-    enum STATE { OPEN, CLOSED, PROCESSING, DELETED }
     STATE public state;
 
-    modifier validPIck(PICK pick) {
+    modifier validPick(PICK pick) {
         require(pick != PICK.NOT_SET, "Pick has not been set")
         _;
-    }
-
-
-    struct Wager {
-        address payable player1; // Creator
-        address payable player2; 
-        PICK player1Pick;
-        PICK player2Pick;
-        STATE state;
-        uint256 prize;
-        address payable winner;
     }
 
     Wager[] betHistory;
@@ -67,6 +65,15 @@ contract Coinflip is IEntropyConsumer {
         emit WagerCreated(msg.sender, msg.value, id);
     }
 
+    function closeWager(uint64 gameId) public onlyOwner {
+        require(wagerMap[gameId] != 0, "This wager does not exist")
+        require(wagerMap[gameId].state == STATE.OPEN, "Game is not open")
+        Wager storage wager = wagerMap[gameId];
+        wager.player1.transfer(wager.prize);
+
+        delete wagerMap[gameId]; // Don't store games that haven't been played
+    }
+
     function joinWager(uint64 gameId, PICK pick) public payable validPick(pick) {
         Wager storage wager = wagerMap[gameId]; // Get the reference to struct for persistant modification
 
@@ -77,9 +84,17 @@ contract Coinflip is IEntropyConsumer {
         // add require check to see if join bet is within 1-2% of actual wager bet
 
         wager.player2Pick = pick;
-        wagerMap[_gameId].prize ++ msg.value,
-        wagerMap[_gameId].state = STATE.PROCESSING;
-        wagerMap[_gameId].player2 = payable(msg.sender);
+        wager.prize += msg.value;
+        wager.state = STATE.PROCESSING;
+        wager.player2 = payable(msg.sender);
+
+        emit WagerCommenced(wager.id)
+
+        flip(wager);
+    }
+
+    function flip(Wager wager) internal {
+        /* Handles the winner selection via Pyth entropy & pays out to the winner. */
     }
 
     function getEntropy() internal view override returns (address) {
@@ -88,11 +103,5 @@ contract Coinflip is IEntropyConsumer {
 
     function isBetMatched() {
 
-    }
-
-    function flip(Wager wager) internal {
-        /* Handles the winner selection via Pyth entropy & pays out to the winner. */
-`       
-        uint64 
     }
 }
