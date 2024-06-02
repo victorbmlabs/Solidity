@@ -1,6 +1,5 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
-require("@nomiclabs/hardhat-waffle");
 require("dotenv").config({ path: ".env" });
 
 const privateKey: string = process.env.CELO_PRIVATEKEY!;
